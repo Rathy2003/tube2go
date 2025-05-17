@@ -1,0 +1,187 @@
+{% load static %}
+
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Document</title>
+    <link rel="stylesheet" href="{% static 'style.css' %}">
+</head>
+<body>
+{% verbatim %}
+<div id="app">
+    <nav>
+        <div id="logo">
+
+        </div>
+        <ul>
+            <li><a href="">Home</a></li>
+            <li><a href="">About</a></li>
+        </ul>
+    </nav>
+    <div class="container">
+        <div id="url-wrapper" :style="{alignItems: is_error ?  'center':'flex-end'}">
+            <div style="display: flex;flex-direction: column;gap: 10px;">
+                <label for="url">Enter Valid URL :</label>
+                <input v-model="url" id="url" :class="{'is-invalid': is_error}" type="text" placeholder="Enter URL" :disabled="is_loading">
+                <span v-if="is_error" id="err-msg">Please Provide Valid URL</span>
+            </div>
+
+            <button @click="fetchInfo" type="button" class="button" id="get-btn">GET</button>
+        </div>
+        <br/>
+        <!-- loading -->
+        <div v-if="is_loading" class="loader"></div>
+        <!-- Info -->
+        <div v-if="result && !is_downloading && !download_url" id="information-wrapper">
+            <div id="left" :style="{'background-image': 'url(' + result.thumbnail + ')'}">
+            </div>
+            <div id="right">
+                <p>{{ result.title }}</p>
+                <br/>
+                <div>
+                    <div class="select">
+                        <select @change="onChangeFormat" v-model="format">
+                            <option value="mp4">MP4</option>
+                            <option value="mp3">MP3</option>
+                        </select>
+                    </div>
+                   <div class="select">
+                        <select v-if="format=='mp4'" v-model="option">
+                            <option v-for="(item,index) in result.mp4" :value="item" :key="index">{{ item }}</option>
+                        </select>
+
+                    <select v-else v-model="option">
+                        <option v-for="(item,index) in result.mp3" :key="index" :value="item">{{ item }}</option>
+                    </select>
+                   </div>
+                    <button  @click="onClickDownload" class="button">{{ !is_downloading ? 'Download' : 'Waiting Downloading' }}</button>
+                </div>
+            </div>
+
+        </div>
+
+        <div v-if="is_downloading || download_url" id="downloading-wrapper">
+           <div v-if="!download_url">
+                <div class="download-loader"></div>
+                <span>Downloading...</span>
+           </div>
+            <br/>
+           <div v-if="download_url">
+                <a class="button" :href="download_url" download>Download Now</a>
+                &nbsp;
+                <a @click="onClickNext" class="button">Next</a>
+           </div>
+        </div>
+    </div>
+</div>
+{% endverbatim %}
+
+</body>
+<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+<script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+
+<script>
+    const {createApp} = Vue
+
+    createApp({
+        data() {
+            return {
+                url: "",
+                format: "mp4",
+                option: null,
+                result: null,
+                is_loading: false,
+                download_url: null,
+                is_downloading: false,
+                is_error: false,
+                temp_url: null,
+                temp_filename: null,
+            }
+        },
+        watch: {
+          url(newValue, oldValue) {
+            if(this.is_error){
+                this.is_error = false;
+            }
+          }
+        },
+        methods: {
+            onClickNext(){
+                axios.post("delete_file", {
+                    filename: this.temp_filename
+                }, {
+                    headers: {
+                        "Content-Type": "multipart/form-data"
+                    },
+                }).then((res) => {
+                    if(res.data.status === 'success'){
+                        this.result = null;
+                        this.temp_filename = null;
+                        this.download_url= null;
+                        this.url = "";
+                        this.option = null;
+                        this.format =  "mp4"
+                        this.temp_url = null;
+                    }
+                })
+            },
+            fetchInfo() {
+                if(this.url.trim() === ""){
+                    return this.is_error = true
+                }
+
+                this.is_loading = true;
+                this.temp_url = this.url;
+                axios.post("getinfo", {
+                    url: this.url
+                }, {
+                    headers: {
+                        "Content-Type": "multipart/form-data"
+                    },
+                }).then((res) => {
+                    if (res.status === 200) {
+                        this.result = res.data
+                        this.option = res.data.mp4[0]
+                    }
+                    this.is_loading = false;
+                })
+            },
+
+            onChangeFormat(){
+                if(this.format == 'mp4'){
+                          this.option = this.result.mp4[0];
+                }else{
+                    this.option = this.result.mp3[0];
+                }
+
+            },
+
+            onClickDownload() {
+                this.is_downloading = true
+                axios.post("http://127.0.0.1:8000/download", {
+                    url: this.temp_url,
+                    format: this.format,
+                    option: this.option
+                }, {
+                    headers: {
+                        "Content-Type": "multipart/form-data"
+                    },
+                }).then((res) => {
+                    if (res.status === 200) {
+                        this.is_downloading = false;
+                        this.temp_filename = res.data.filepath
+                        this.download_url = `${window.location}download/${encodeURIComponent(res.data.filepath)}`
+                    } else {
+                        alert("Download failed or invalid format.");
+                    }
+                }).catch((err) => {
+                    console.error(err);
+                    alert("Something went wrong.");
+                });
+            },
+        }
+    }).mount('#app')
+</script>
+</html>
