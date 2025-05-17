@@ -1,6 +1,5 @@
 import os
 import re
-
 import unicodedata
 import yt_dlp
 from pathvalidate import sanitize_filename
@@ -90,10 +89,6 @@ def fetch_audio_birate(url):
         sorted_audio_bitrates = sorted(bitrates, key=lambda x: int(x[:-4]), reverse=True)
     return sorted_audio_bitrates
 
-def get_ffmpeg_path():
-    base_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'ffmpeg')
-    return os.path.join(base_path,'bin', 'ffmpeg.exe')
-
 
 def download_video(url, target_resolution):
     with yt_dlp.YoutubeDL({'quiet': True}) as ydl:
@@ -105,7 +100,6 @@ def download_video(url, target_resolution):
         'format': f'bestvideo[height={target_resolution[:-1]}]+bestaudio[ext=m4a]/best[height={target_resolution[:-1]}]',
         'quiet': True,
         'merge_output_format': 'mp4',
-        'ffmpeg_location': get_ffmpeg_path(),
         'outtmpl': os.path.join("media", f'{safe_title}.%(ext)s'),
     }
 
@@ -134,7 +128,6 @@ def download_audio(url, target_bitrate):
                 'preferredquality': str(target_bitrate)
             }
         ],
-        'ffmpeg_location': get_ffmpeg_path(),
         'outtmpl': os.path.join('media', f'{safe_title}.%(ext)s'),
         'quiet': True
     }
