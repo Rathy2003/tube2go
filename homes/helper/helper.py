@@ -20,6 +20,7 @@ def get_video_resolution(url):
     ytdl_opts = {
         'quiet':True,
         'format':'bestvideo',
+        'geo_bypass': True,
     }
     resolutions = []
     with yt_dlp.YoutubeDL(ytdl_opts) as ydl:
@@ -39,7 +40,8 @@ def get_info(url):
     ytdl_opts = {
         'quiet': True,
         'format': 'bestvideo+bestaudio/best',
-        'skip_download': True
+        'skip_download': True,
+        'geo_bypass': True,
     }
 
     with yt_dlp.YoutubeDL(ytdl_opts) as ydl:
@@ -73,7 +75,8 @@ def get_info(url):
 
 def fetch_audio_birate(url):
     ydl_opts = {
-        'format':'bestaudio'
+        'format':'bestaudio',
+        'geo_bypass': True,
     }
     bitrates = []
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
